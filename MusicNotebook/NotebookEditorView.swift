@@ -6,8 +6,6 @@
 import SwiftUI
 import PencilKit
 
-private let pageSize = CGSize(width: 1000, height: 1400)
-
 struct NotebookEditorView: View {
     let notebookID: UUID
 
@@ -18,6 +16,7 @@ struct NotebookEditorView: View {
     @State private var savedConfirmationText: String?
     @State private var isConfirmingPageDeletion = false
     @State private var fitToScreenTrigger = 0
+    @State private var isShowingPageManager = false
 
     private var notebookIndex: Int? {
         library.notebooks.firstIndex(where: { $0.id == notebookID })
@@ -35,7 +34,7 @@ struct NotebookEditorView: View {
                         library.mutate(id: notebookID) { $0.pages[pageIndex].drawing = newValue }
                     }
                 ),
-                pageSize: pageSize,
+                pageSize: NotebookLayout.pageSize,
                 fitToScreenTrigger: $fitToScreenTrigger
             )
             .id(notebook.pages[pageIndex].id)
@@ -66,6 +65,12 @@ struct NotebookEditorView: View {
                         fitToScreenTrigger += 1
                     } label: {
                         Label("화면에 맞추기", systemImage: "arrow.up.left.and.arrow.down.right")
+                    }
+
+                    Button {
+                        isShowingPageManager = true
+                    } label: {
+                        Label("페이지 관리", systemImage: "square.grid.2x2")
                     }
                 }
 
@@ -120,6 +125,11 @@ struct NotebookEditorView: View {
                 }
             } message: {
                 Text("페이지 \(pageIndex + 1)의 필기 내용이 삭제되며 되돌릴 수 없습니다.")
+            }
+            .sheet(isPresented: $isShowingPageManager) {
+                PageManagerView(notebookID: notebookID) { selectedIndex in
+                    currentPageIndex = selectedIndex
+                }
             }
         } else {
             ContentUnavailableView("노트북을 찾을 수 없습니다", systemImage: "exclamationmark.triangle")
