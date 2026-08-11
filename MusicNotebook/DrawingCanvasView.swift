@@ -11,6 +11,8 @@ import PencilKit
 struct DrawingCanvasView: UIViewRepresentable {
     @Binding var drawing: PKDrawing
     var pageSize: CGSize
+    /// Incremented externally (e.g. by a toolbar button) to snap the page back to fit-to-screen zoom.
+    @Binding var fitToScreenTrigger: Int
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -47,11 +49,14 @@ struct DrawingCanvasView: UIViewRepresentable {
         scrollView.addSubview(container)
         scrollView.contentSize = pageSize
 
+        context.coordinator.scrollView = scrollView
         context.coordinator.containerView = container
         context.coordinator.canvasView = canvas
+        context.coordinator.pageSize = pageSize
+        context.coordinator.lastFitTrigger = fitToScreenTrigger
 
         DispatchQueue.main.async {
-            fitToWidth(scrollView: scrollView, pageSize: pageSize)
+            context.coordinator.fitToScreen(animated: false)
             context.coordinator.showToolPicker()
         }
 
@@ -63,6 +68,10 @@ struct DrawingCanvasView: UIViewRepresentable {
         if canvas.drawing.dataRepresentation() != drawing.dataRepresentation() {
             canvas.drawing = drawing
         }
+        if context.coordinator.lastFitTrigger != fitToScreenTrigger {
+            context.coordinator.lastFitTrigger = fitToScreenTrigger
+            context.coordinator.fitToScreen(animated: true)
+        }
         context.coordinator.showToolPicker()
     }
 
@@ -70,16 +79,13 @@ struct DrawingCanvasView: UIViewRepresentable {
         coordinator.hideToolPicker()
     }
 
-    private func fitToWidth(scrollView: UIScrollView, pageSize: CGSize) {
-        guard scrollView.bounds.width > 0 else { return }
-        let scale = scrollView.bounds.width / pageSize.width
-        scrollView.zoomScale = max(scrollView.minimumZoomScale, min(scale, scrollView.maximumZoomScale))
-    }
-
     final class Coordinator: NSObject, UIScrollViewDelegate, PKCanvasViewDelegate {
         var parent: DrawingCanvasView
+        weak var scrollView: UIScrollView?
         weak var containerView: UIView?
         weak var canvasView: PKCanvasView?
+        var pageSize: CGSize = .zero
+        var lastFitTrigger = 0
         private var toolPicker: PKToolPicker?
 
         init(_ parent: DrawingCanvasView) {
@@ -92,6 +98,15 @@ struct DrawingCanvasView: UIViewRepresentable {
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             parent.drawing = canvasView.drawing
+        }
+
+        /// Zooms so the page width fills the screen in one step, matching the initial layout.
+        func fitToScreen(animated: Bool) {
+            guard let scrollView, scrollView.bounds.width > 0, pageSize.width > 0 else { return }
+            let scale = scrollView.bounds.width / pageSize.width
+            let clamped = max(scrollView.minimumZoomScale, min(scale, scrollView.maximumZoomScale))
+            scrollView.setZoomScale(clamped, animated: animated)
+            scrollView.setContentOffset(CGPoint(x: 0, y: -scrollView.adjustedContentInset.top), animated: animated)
         }
 
         func showToolPicker() {

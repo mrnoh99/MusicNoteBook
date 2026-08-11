@@ -5,14 +5,14 @@
 
 import UIKit
 
-/// Draws repeating 5-line music staves on a cream paper background.
+/// Draws repeating 5-line music staves on a white paper background.
 final class StaffPaperView: UIView {
     var lineSpacing: CGFloat = 9
     var staffGroupSpacing: CGFloat = 80
     var topMargin: CGFloat = 70
     var sideMargin: CGFloat = 50
     var lineColor = UIColor(red: 0.52, green: 0.55, blue: 0.47, alpha: 0.55)
-    var paperColor = UIColor(red: 0.972, green: 0.961, blue: 0.902, alpha: 1.0)
+    var paperColor = UIColor.white
 
     override init(frame: CGRect) {
         super.init(frame: frame)

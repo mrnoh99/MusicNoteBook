@@ -16,6 +16,8 @@ struct NotebookEditorView: View {
     @State private var isRenaming = false
     @State private var renameText = ""
     @State private var savedConfirmationText: String?
+    @State private var isConfirmingPageDeletion = false
+    @State private var fitToScreenTrigger = 0
 
     private var notebookIndex: Int? {
         library.notebooks.firstIndex(where: { $0.id == notebookID })
@@ -33,7 +35,8 @@ struct NotebookEditorView: View {
                         library.mutate(id: notebookID) { $0.pages[pageIndex].drawing = newValue }
                     }
                 ),
-                pageSize: pageSize
+                pageSize: pageSize,
+                fitToScreenTrigger: $fitToScreenTrigger
             )
             .id(notebook.pages[pageIndex].id)
             .ignoresSafeArea(edges: .bottom)
@@ -58,6 +61,12 @@ struct NotebookEditorView: View {
                         Image(systemName: "chevron.right")
                     }
                     .disabled(pageIndex == notebook.pages.count - 1)
+
+                    Button {
+                        fitToScreenTrigger += 1
+                    } label: {
+                        Label("화면에 맞추기", systemImage: "arrow.up.left.and.arrow.down.right")
+                    }
                 }
 
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -76,8 +85,7 @@ struct NotebookEditorView: View {
                     }
 
                     Button(role: .destructive) {
-                        library.mutate(id: notebookID) { $0.pages.remove(at: pageIndex) }
-                        currentPageIndex = min(currentPageIndex, notebook.pages.count - 2)
+                        isConfirmingPageDeletion = true
                     } label: {
                         Image(systemName: "trash")
                     }
@@ -103,6 +111,15 @@ struct NotebookEditorView: View {
                 set: { if !$0 { savedConfirmationText = nil } }
             )) {
                 Button("확인", role: .cancel) {}
+            }
+            .alert("이 페이지를 삭제하시겠습니까?", isPresented: $isConfirmingPageDeletion) {
+                Button("취소", role: .cancel) {}
+                Button("삭제", role: .destructive) {
+                    library.mutate(id: notebookID) { $0.pages.remove(at: pageIndex) }
+                    currentPageIndex = min(currentPageIndex, notebook.pages.count - 2)
+                }
+            } message: {
+                Text("페이지 \(pageIndex + 1)의 필기 내용이 삭제되며 되돌릴 수 없습니다.")
             }
         } else {
             ContentUnavailableView("노트북을 찾을 수 없습니다", systemImage: "exclamationmark.triangle")
